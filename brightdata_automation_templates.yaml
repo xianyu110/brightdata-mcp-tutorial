@@ -1,0 +1,432 @@
+# Bright Data MCP API 自动化集成模板集合
+# 包含多种流行自动化平台的配置示例
+
+# =====================================
+# 1. Terraform 基础设施即代码配置
+# =====================================
+terraform:
+  provider:
+    name: "http"
+    version: "~> 3.0"
+  
+  resource:
+    brightdata_scraper:
+      type: "null_resource"
+      provisioner:
+        local-exec:
+          command: |
+            curl -X POST https://api.brightdata.com/mcp/v1/extract \
+              -H "Authorization: Bearer ${var.brightdata_api_token}" \
+              -H "Content-Type: application/json" \
+              -d '{
+                "url": "${var.target_url}",
+                "browser": true,
+                "unlocker": true
+              }'
+
+# =====================================
+# 2. Jenkins Pipeline 配置
+# =====================================
+jenkins:
+  pipeline:
+    agent: any
+    environment:
+      BRIGHTDATA_TOKEN: credentials('brightdata-api-token')
+    stages:
+      - stage: "Scrape Data"
+        steps:
+          - script: |
+              def response = httpRequest(
+                url: 'https://api.brightdata.com/mcp/v1/extract',
+                httpMode: 'POST',
+                customHeaders: [[name: 'Authorization', value: "Bearer ${env.BRIGHTDATA_TOKEN}"]],
+                contentType: 'APPLICATION_JSON',
+                requestBody: '''{
+                  "url": "${params.TARGET_URL}",
+                  "browser": true,
+                  "unlocker": true,
+                  "extract": {
+                    "data": {
+                      "selector": "${params.DATA_SELECTOR}",
+                      "multiple": true
+                    }
+                  }
+                }'''
+              )
+              def data = readJSON text: response.content
+              writeJSON file: 'results.json', json: data
+
+# =====================================
+# 3. GitLab CI/CD 配置
+# =====================================
+gitlab_ci:
+  scrape_job:
+    stage: scrape
+    image: curlimages/curl:latest
+    variables:
+      API_ENDPOINT: "https://api.brightdata.com/mcp/v1/extract"
+    script:
+      - |
+        curl -X POST "$API_ENDPOINT" \
+          -H "Authorization: Bearer $BRIGHTDATA_API_TOKEN" \
+          -H "Content-Type: application/json" \
+          -d @scrape_config.json \
+          -o results.json
+      - cat results.json | jq '.'
+    artifacts:
+      paths:
+        - results.json
+      expire_in: 1 week
+    only:
+      - schedules
+      - web
+
+# =====================================
+# 4. Ansible Playbook
+# =====================================
+ansible:
+  playbook:
+    name: "Bright Data Scraping Playbook"
+    hosts: localhost
+    vars:
+      api_token: "{{ vault_brightdata_token }}"
+      api_url: "https://api.brightdata.com/mcp/v1/extract"
+    tasks:
+      - name: "Scrape website data"
+        uri:
+          url: "{{ api_url }}"
+          method: POST
+          headers:
+            Authorization: "Bearer {{ api_token }}"
+            Content-Type: "application/json"
+          body_format: json
+          body:
+            url: "{{ target_url }}"
+            browser: true
+            unlocker: true
+            pro: 1
+          timeout: 60
+        register: scrape_result
+      
+      - name: "Save results to file"
+        copy:
+          content: "{{ scrape_result.json | to_nice_json }}"
+          dest: "./results/{{ ansible_date_time.epoch }}.json"
+
+# =====================================
+# 5. AWS Lambda Function (Serverless)
+# =====================================
+aws_lambda:
+  serverless_yml:
+    service: brightdata-scraper
+    provider:
+      name: aws
+      runtime: nodejs18.x
+      environment:
+        BRIGHTDATA_API_TOKEN: ${env:BRIGHTDATA_API_TOKEN}
+    
+    functions:
+      scraper:
+        handler: handler.scrape
+        events:
+          - schedule: rate(6 hours)
+          - http:
+              path: scrape
+              method: post
+    
+    custom:
+      pythonRequirements:
+        dockerizePip: true
+
+# =====================================
+# 6. Google Cloud Functions
+# =====================================
+gcp_function:
+  name: "brightDataScraper"
+  runtime: "nodejs18"
+  entry_point: "scrapeData"
+  trigger:
+    type: "pubsub"
+    topic: "scraping-schedule"
+  environment_variables:
+    BRIGHTDATA_API_TOKEN: "{{ secret:brightdata-token }}"
+  
+  code: |
+    const axios = require('axios');
+    
+    exports.scrapeData = async (message, context) => {
+      const data = JSON.parse(Buffer.from(message.data, 'base64').toString());
+      
+      const response = await axios.post(
+        'https://api.brightdata.com/mcp/v1/extract',
+        {
+          url: data.url,
+          browser: true,
+          unlocker: true
+        },
+        {
+          headers: {
+            'Authorization': `Bearer ${process.env.BRIGHTDATA_API_TOKEN}`
+          }
+        }
+      );
+      
+      // Store in Cloud Storage
+      const {Storage} = require('@google-cloud/storage');
+      const storage = new Storage();
+      const bucket = storage.bucket('scraping-results');
+      const file = bucket.file(`${Date.now()}.json`);
+      await file.save(JSON.stringify(response.data));
+    };
+
+# =====================================
+# 7. Prefect Flow (Python Orchestration)
+# =====================================
+prefect:
+  flow:
+    name: "bright_data_scraping_flow"
+    schedule:
+      interval: "0 */4 * * *"  # Every 4 hours
+    
+    tasks:
+      - name: "scrape_data"
+        type: "python"
+        code: |
+          from prefect import task, flow
+          import httpx
+          from datetime import datetime
+          
+          @task(retries=3, retry_delay_seconds=60)
+          def scrape_website(url: str, api_token: str):
+              headers = {
+                  "Authorization": f"Bearer {api_token}",
+                  "Content-Type": "application/json"
+              }
+              
+              payload = {
+                  "url": url,
+                  "browser": True,
+                  "unlocker": True,
+                  "extract": {
+                      "data": {
+                          "selector": "body",
+                          "multiple": False
+                      }
+                  }
+              }
+              
+              response = httpx.post(
+                  "https://api.brightdata.com/mcp/v1/extract",
+                  headers=headers,
+                  json=payload,
+                  timeout=30.0
+              )
+              
+              return response.json()
+          
+          @flow
+          def scraping_pipeline():
+              urls = ["https://example1.com", "https://example2.com"]
+              api_token = os.environ["BRIGHTDATA_API_TOKEN"]
+              
+              results = []
+              for url in urls:
+                  result = scrape_website(url, api_token)
+                  results.append(result)
+              
+              return results
+
+# =====================================
+# 8. Dagster Pipeline
+# =====================================
+dagster:
+  repository:
+    name: "brightdata_pipelines"
+    jobs:
+      - name: "daily_scraping_job"
+        ops:
+          - name: "scrape_google_results"
+            config:
+              api_token: {"env": "BRIGHTDATA_API_TOKEN"}
+              queries:
+                - "machine learning trends 2024"
+                - "data engineering best practices"
+            
+            code: |
+              from dagster import op, job, schedule
+              import requests
+              
+              @op(config_schema={"api_token": str, "queries": [str]})
+              def scrape_google_results(context):
+                  api_token = context.op_config["api_token"]
+                  queries = context.op_config["queries"]
+                  
+                  results = []
+                  for query in queries:
+                      response = requests.post(
+                          "https://api.brightdata.com/mcp/v1/extract",
+                          headers={"Authorization": f"Bearer {api_token}"},
+                          json={
+                              "url": f"https://google.com/search?q={query}",
+                              "browser": True,
+                              "unlocker": True
+                          }
+                      )
+                      results.append(response.json())
+                  
+                  return results
+
+# =====================================
+# 9. Temporal Workflow
+# =====================================
+temporal:
+  workflow:
+    name: "BrightDataScrapingWorkflow"
+    activities:
+      - name: "scrapeWebsite"
+        retry_policy:
+          initial_interval: "1s"
+          maximum_attempts: 5
+          maximum_interval: "100s"
+          backoff_coefficient: 2.0
+        
+        implementation: |
+          async function scrapeWebsite(url: string): Promise<any> {
+            const response = await fetch('https://api.brightdata.com/mcp/v1/extract', {
+              method: 'POST',
+              headers: {
+                'Authorization': `Bearer ${process.env.BRIGHTDATA_API_TOKEN}`,
+                'Content-Type': 'application/json'
+              },
+              body: JSON.stringify({
+                url: url,
+                browser: true,
+                unlocker: true,
+                pro: 1
+              })
+            });
+            
+            return response.json();
+          }
+
+# =====================================
+# 10. Argo Workflows (Kubernetes)
+# =====================================
+argo:
+  workflow:
+    apiVersion: argoproj.io/v1alpha1
+    kind: Workflow
+    metadata:
+      name: brightdata-scraping
+    spec:
+      entrypoint: scrape-pipeline
+      templates:
+        - name: scrape-pipeline
+          dag:
+            tasks:
+              - name: scrape-data
+                template: http-scrape
+                arguments:
+                  parameters:
+                    - name: target-url
+                      value: "https://example.com"
+        
+        - name: http-scrape
+          inputs:
+            parameters:
+              - name: target-url
+          container:
+            image: curlimages/curl:latest
+            command: [sh, -c]
+            args:
+              - |
+                curl -X POST https://api.brightdata.com/mcp/v1/extract \
+                  -H "Authorization: Bearer $BRIGHTDATA_TOKEN" \
+                  -H "Content-Type: application/json" \
+                  -d '{
+                    "url": "{{inputs.parameters.target-url}}",
+                    "browser": true,
+                    "unlocker": true
+                  }' > /tmp/results.json
+            env:
+              - name: BRIGHTDATA_TOKEN
+                valueFrom:
+                  secretKeyRef:
+                    name: brightdata-secret
+                    key: api-token
+
+# =====================================
+# 11. Power Automate (Microsoft)
+# =====================================
+power_automate:
+  flow:
+    name: "Bright Data Web Scraper"
+    trigger:
+      type: "Recurrence"
+      frequency: "Hour"
+      interval: 6
+    
+    actions:
+      - name: "HTTP Request to Bright Data"
+        type: "HTTP"
+        method: "POST"
+        uri: "https://api.brightdata.com/mcp/v1/extract"
+        headers:
+          Authorization: "Bearer @{variables('BrightDataToken')}"
+          Content-Type: "application/json"
+        body:
+          url: "@{triggerBody()?['url']}"
+          browser: true
+          unlocker: true
+      
+      - name: "Parse JSON Response"
+        type: "ParseJSON"
+        content: "@{body('HTTP_Request_to_Bright_Data')}"
+      
+      - name: "Save to SharePoint"
+        type: "CreateFile"
+        site: "https://company.sharepoint.com/sites/data"
+        folder: "/Shared Documents/Scraping Results"
+        fileName: "@{concat('result_', utcNow(), '.json')}"
+        fileContent: "@{body('Parse_JSON_Response')}"
+
+# =====================================
+# 12. Tray.io Automation
+# =====================================
+tray_io:
+  workflow:
+    name: "Bright Data Integration"
+    trigger:
+      type: "webhook"
+      authentication: "api_key"
+    
+    steps:
+      - id: "call_brightdata"
+        type: "http"
+        method: "POST"
+        url: "https://api.brightdata.com/mcp/v1/extract"
+        headers:
+          - key: "Authorization"
+            value: "Bearer {{config.brightdata_api_token}}"
+        body:
+          url: "{{trigger.data.url}}"
+          browser: true
+          unlocker: true
+          extract: "{{trigger.data.extract_config}}"
+      
+      - id: "transform_data"
+        type: "script"
+        language: "javascript"
+        code: |
+          const results = steps.call_brightdata.data.extract.results;
+          return results.map(item => ({
+            title: item.title,
+            url: item.url,
+            timestamp: new Date().toISOString()
+          }));
+      
+      - id: "store_results"
+        type: "data-storage"
+        operation: "create"
+        collection: "scraping_results"
+        data: "{{steps.transform_data}}"
