@@ -2,6 +2,8 @@
 
 > 在数据驱动的时代，获取实时搜索结果对于市场研究、竞争分析和内容优化至关重要。本文将详细介绍如何使用Python和Bright Data SDK高效地抓取Google搜索结果。
 
+📌 **本教程完整代码已开源**: [GitHub - brightdata-mcp-tutorial](https://github.com/xianyu110/brightdata-mcp-tutorial) | [在线演示](https://xianyu110.github.io/brightdata-mcp-tutorial/)
+
 ## 为什么选择Bright Data？
 
 Bright Data是全球排名第一的网络数据平台，为几万家组织提供数据需求支持。基于我们的实际测试，Bright Data在以下方面表现卓越：
@@ -11,6 +13,8 @@ Bright Data是全球排名第一的网络数据平台，为几万家组织提供
 3. **全球代理网络** - 支持美国、英国、加拿大、澳大利亚等多个地区
 4. **高性能处理** - 平均响应包含40万-200万字符的完整搜索结果
 5. **免费额度** - 前3个月免费，每月5,000次请求
+
+![image-20250914112416145](https://restname.oss-cn-hangzhou.aliyuncs.com/image-20250914112416145.png)
 
 ## 环境准备
 
@@ -280,159 +284,6 @@ with open("competitor_monitoring.json", "w") as f:
 
 
 
-
-
-## 数据处理和分析
-
-### 1. 提取结构化数据
-
-```python
-def extract_search_results(raw_results):
-    """
-    从原始搜索结果中提取结构化数据
-    """
-    parsed = client.parse_content(raw_results)
-    
-    structured_results = []
-    
-    # 根据实际返回格式提取数据
-    if isinstance(parsed, dict):
-        # 提取标题、URL、描述等信息
-        # 这里的具体实现取决于API返回的数据格式
-        if 'text' in parsed:
-            # 简单的文本解析示例
-            lines = parsed['text'].split('\n')
-            for line in lines:
-                if line.strip():
-                    structured_results.append({
-                        "content": line.strip(),
-                        "type": "text_line"
-                    })
-    
-    return structured_results
-
-# 使用示例
-results = client.search("Python tutorials")
-structured_data = extract_search_results(results)
-```
-
-### 2. 导出为不同格式
-
-```python
-import csv
-import pandas as pd
-
-def export_results(results, format="json"):
-    """
-    将搜索结果导出为不同格式
-    
-    Args:
-        results: 搜索结果
-        format: 导出格式 (json, csv, excel)
-    """
-    timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-    
-    if format == "json":
-        filename = f"search_results_{timestamp}.json"
-        with open(filename, "w", encoding="utf-8") as f:
-            json.dump(results, f, indent=2, ensure_ascii=False)
-            
-    elif format == "csv":
-        filename = f"search_results_{timestamp}.csv"
-        # 将结果转换为平面结构
-        flat_results = []
-        for item in results:
-            flat_results.append({
-                "query": item.get("query", ""),
-                "timestamp": item.get("timestamp", ""),
-                "content": str(item.get("results", ""))[:500]  # 限制长度
-            })
-        
-        df = pd.DataFrame(flat_results)
-        df.to_csv(filename, index=False, encoding="utf-8")
-        
-    elif format == "excel":
-        filename = f"search_results_{timestamp}.xlsx"
-        df = pd.DataFrame(results)
-        df.to_excel(filename, index=False)
-    
-    print(f"结果已导出到: {filename}")
-    return filename
-```
-
-
-
-## 错误处理和最佳实践
-
-### 1. 实现重试机制
-
-```python
-import time
-from typing import Optional
-
-def search_with_retry(query: str, max_retries: int = 3) -> Optional[dict]:
-    """
-    带重试机制的搜索函数
-    
-    Args:
-        query: 搜索关键词
-        max_retries: 最大重试次数
-    
-    Returns:
-        搜索结果或None
-    """
-    for attempt in range(max_retries):
-        try:
-            print(f"尝试搜索 ({attempt + 1}/{max_retries}): {query}")
-            results = client.search(query)
-            return client.parse_content(results)
-            
-        except Exception as e:
-            print(f"搜索失败: {e}")
-            
-            if attempt < max_retries - 1:
-                wait_time = (attempt + 1) * 5  # 递增等待时间
-                print(f"等待 {wait_time} 秒后重试...")
-                time.sleep(wait_time)
-            else:
-                print(f"达到最大重试次数，放弃搜索: {query}")
-                return None
-```
-
-### 2. 日志记录
-
-```python
-import logging
-
-# 配置日志
-logging.basicConfig(
-    level=logging.INFO,
-    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
-    handlers=[
-        logging.FileHandler('google_search.log'),
-        logging.StreamHandler()
-    ]
-)
-
-logger = logging.getLogger('GoogleSearchScraper')
-
-def logged_search(query):
-    """带日志记录的搜索"""
-    logger.info(f"开始搜索: {query}")
-    
-    try:
-        start_time = time.time()
-        results = client.search(query)
-        elapsed_time = time.time() - start_time
-        
-        logger.info(f"搜索成功: {query} (耗时: {elapsed_time:.2f}秒)")
-        return results
-        
-    except Exception as e:
-        logger.error(f"搜索失败: {query} - {e}")
-        raise
-```
-
 ## 技术亮点：MCP Server与自动化集成
 
 ### MCP Server简介
@@ -446,7 +297,7 @@ Bright Data的Web MCP Server（Model Context Protocol Server）是一个强大�
 
 ### 与自动化工具集成
 
-根据PDF文档，Bright Data可以与多种自动化工具无缝集成：
+Bright Data可以与多种自动化工具无缝集成：
 
 ```python
 # n8n集成示例
@@ -516,7 +367,7 @@ Bright Data的Web MCP Server（Model Context Protocol Server）是一个强大�
 - **AI应用支持** - 可用于AI Agent自动化工作流
 - **免费试用** - 前3个月免费，每月5000次请求
 
-### 推荐用途（基于PDF）
+### 推荐用途
 - 网页数据抓取和实时数据采集
 - 智能体(AI Agent)自动化工作流
 - Python爬虫和动态网页抓取
@@ -526,8 +377,12 @@ Bright Data的Web MCP Server（Model Context Protocol Server）是一个强大�
 
 ## 相关资源
 
-根据PDF文档，以下是官方资源链接：
+### 本教程资源
+- 🚀 **本教程GitHub仓库**: [https://github.com/xianyu110/brightdata-mcp-tutorial](https://github.com/xianyu110/brightdata-mcp-tutorial)
+- 🌐 **在线演示**: [https://xianyu110.github.io/brightdata-mcp-tutorial/](https://xianyu110.github.io/brightdata-mcp-tutorial/)
+- 📥 **下载完整代码**: [https://github.com/xianyu110/brightdata-mcp-tutorial/archive/refs/heads/main.zip](https://github.com/xianyu110/brightdata-mcp-tutorial/archive/refs/heads/main.zip)
 
+### Bright Data官方资源
 - 🌐 **官方页面**: [https://bright.cn/ai/mcp-server](https://bright.cn/ai/mcp-server)
 - 📚 **技术文档**: [https://docs.brightdata.com/api-reference/MCP-Server](https://docs.brightdata.com/api-reference/MCP-Server)
 - 💻 **GitHub示例**: [https://github.com/brightdata](https://github.com/brightdata)
