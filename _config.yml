@@ -1,0 +1,4 @@
+theme: jekyll-theme-cayman
+title: Bright Data MCP API 教程
+description: 使用Python实时抓取Google搜索结果的完整指南
+show_downloads: true

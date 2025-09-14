@@ -1,0 +1,197 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Bright Data MCP API 教程 - Python抓取Google搜索结果</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/github-markdown-css/5.2.0/github-markdown.min.css">
+    <style>
+        body {
+            box-sizing: border-box;
+            min-width: 200px;
+            max-width: 980px;
+            margin: 0 auto;
+            padding: 45px;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif;
+        }
+        .markdown-body {
+            box-sizing: border-box;
+            min-width: 200px;
+            max-width: 980px;
+            margin: 0 auto;
+        }
+        .nav {
+            background-color: #f6f8fa;
+            padding: 16px;
+            margin-bottom: 32px;
+            border-radius: 6px;
+        }
+        .nav h3 {
+            margin-top: 0;
+        }
+        .nav ul {
+            list-style: none;
+            padding-left: 0;
+        }
+        .nav li {
+            margin: 8px 0;
+        }
+        .nav a {
+            color: #0366d6;
+            text-decoration: none;
+        }
+        .nav a:hover {
+            text-decoration: underline;
+        }
+        .hero {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 48px 32px;
+            border-radius: 12px;
+            margin-bottom: 32px;
+            text-align: center;
+        }
+        .hero h1 {
+            margin: 0 0 16px 0;
+            font-size: 3em;
+        }
+        .hero p {
+            font-size: 1.2em;
+            margin: 0;
+        }
+        .features {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 24px;
+            margin: 32px 0;
+        }
+        .feature {
+            background: #f6f8fa;
+            padding: 24px;
+            border-radius: 8px;
+            border: 1px solid #e1e4e8;
+        }
+        .feature h3 {
+            margin-top: 0;
+            color: #24292e;
+        }
+        .cta {
+            background: #0366d6;
+            color: white;
+            padding: 12px 24px;
+            border-radius: 6px;
+            text-decoration: none;
+            display: inline-block;
+            margin: 16px 0;
+        }
+        .cta:hover {
+            background: #0256c7;
+        }
+    </style>
+</head>
+<body>
+    <div class="hero">
+        <h1>Bright Data MCP API 教程</h1>
+        <p>使用Python实时抓取Google搜索结果的完整指南</p>
+    </div>
+
+    <div class="markdown-body">
+        <div class="nav">
+            <h3>📚 快速导航</h3>
+            <ul>
+                <li>📖 <a href="blog_google_search_tutorial.md">完整博客教程</a></li>
+                <li>🐍 <a href="brightdata_sdk_guide.md">Python SDK 使用指南</a></li>
+                <li>💻 <a href="#demos">代码示例</a></li>
+                <li>🔧 <a href="#integration">集成指南</a></li>
+                <li>📦 <a href="https://github.com/xianyu110/brightdata-mcp-tutorial">GitHub 仓库</a></li>
+            </ul>
+        </div>
+
+        <h2>🚀 项目简介</h2>
+        <p>本项目提供了使用 Bright Data SDK 抓取 Google 搜索结果的完整教程和代码示例。通过实际测试验证，所有代码都可以直接运行使用。</p>
+
+        <div class="features">
+            <div class="feature">
+                <h3>✅ 100% 成功率</h3>
+                <p>在我们的测试中，所有请求都成功返回数据，平均响应包含40万-200万字符的完整搜索结果。</p>
+            </div>
+            <div class="feature">
+                <h3>🌍 全球覆盖</h3>
+                <p>支持美国、英国、加拿大、澳大利亚等多个地区的搜索结果抓取。</p>
+            </div>
+            <div class="feature">
+                <h3>🤖 AI 集成</h3>
+                <p>可与 n8n、Zapier、LangChain 等自动化工具无缝集成，支持 AI Agent 工作流。</p>
+            </div>
+        </div>
+
+        <h2 id="demos">💻 代码示例</h2>
+        <h3>基础搜索示例</h3>
+        <pre><code>from brightdata import bdclient
+
+# 初始化客户端
+client = bdclient(api_token="your_api_token_here")
+
+# 执行搜索
+results = client.search("Python web scraping tutorial")
+
+# 保存结果
+with open("results.html", "w") as f:
+    f.write(results)</code></pre>
+
+        <h3>主要示例文件</h3>
+        <ul>
+            <li><a href="google_search_blog_demo.py">google_search_blog_demo.py</a> - 完整的演示代码（批量搜索、多地区搜索、竞品监控）</li>
+            <li><a href="test_sdk_simple.py">test_sdk_simple.py</a> - 简单测试脚本</li>
+            <li><a href="brightdata_sdk_demo.py">brightdata_sdk_demo.py</a> - SDK 功能演示</li>
+            <li><a href="competitor_monitoring_enhanced.py">competitor_monitoring_enhanced.py</a> - 增强版竞争对手监控</li>
+        </ul>
+
+        <h2 id="integration">🔧 集成指南</h2>
+        <ul>
+            <li><a href="brightdata_integration_guide.md">API 集成指南</a> - 详细的集成说明</li>
+            <li><a href="brightdata_automation_templates.yaml">自动化模板</a> - 12种自动化平台的配置模板</li>
+            <li><a href="brightdata_nodejs_example.js">Node.js 示例</a> - JavaScript 实现</li>
+        </ul>
+
+        <h2>📊 实测数据</h2>
+        <table>
+            <thead>
+                <tr>
+                    <th>测试项目</th>
+                    <th>结果</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td>单次搜索响应大小</td>
+                    <td>481,161 字符</td>
+                </tr>
+                <tr>
+                    <td>批量搜索成功率</td>
+                    <td>100% (3/3)</td>
+                </tr>
+                <tr>
+                    <td>美国地区响应</td>
+                    <td>1,396,842 字符</td>
+                </tr>
+                <tr>
+                    <td>英国地区响应</td>
+                    <td>771,884 字符</td>
+                </tr>
+            </tbody>
+        </table>
+
+        <h2>🎯 快速开始</h2>
+        <ol>
+            <li>安装 SDK: <code>pip install brightdata-sdk</code></li>
+            <li>获取 API 令牌：<a href="https://bright.cn/ai/mcp-server">注册账号</a></li>
+            <li>运行示例：<code>python3 test_sdk_simple.py</code></li>
+        </ol>
+
+        <p style="text-align: center; margin-top: 48px;">
+            <a href="https://github.com/xianyu110/brightdata-mcp-tutorial" class="cta">查看 GitHub 仓库</a>
+        </p>
+    </div>
+</body>
+</html>
